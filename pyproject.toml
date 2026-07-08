@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ticketseller"
+version = "0.1.0"
+description = "MVC ticket selling application with DAO, State, and Strategy patterns."
+requires-python = ">=3.11"
+dependencies = ["PyQt6>=6.6"]
+
+[project.scripts]
+ticketseller = "ticketseller.app:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
