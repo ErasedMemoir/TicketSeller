@@ -35,27 +35,3 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 python -m pip install -e .
 ```
-
-## Nix Flake Setup
-
-Run these commands from the project root directory:
-
-```bash
-nix develop
-python -m unittest discover -s tests
-python -m ticketseller.app kiosk
-```
-
-To launch the clerk interface:
-
-```bash
-python -m ticketseller.app clerk
-```
-
-Run directly with Nix apps:
-
-```bash
-nix run .#kiosk
-nix run .#clerk
-nix run .#tests
-```
