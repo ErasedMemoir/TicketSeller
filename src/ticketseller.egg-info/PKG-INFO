@@ -1,6 +1,0 @@
-Metadata-Version: 2.4
-Name: ticketseller
-Version: 0.1.0
-Summary: MVC ticket selling application with DAO, State, and Strategy patterns.
-Requires-Python: >=3.11
-Requires-Dist: PyQt6>=6.6
