@@ -24,7 +24,7 @@ def build_demo_controller() -> TicketSeller:
     now = datetime.now(timezone.utc)
     
     # Seed demo events only if the database is currently empty.
-    if not database.search_future_events():
+    if not database.find_future_events():
         database.create_event(
             Event(EventId(1), "Jazz Night", now + timedelta(days=7), 20, Decimal("30.00"), "Blue Hall")
         )
