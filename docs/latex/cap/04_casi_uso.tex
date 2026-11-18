@@ -1,0 +1,188 @@
+\section{Casi d'uso}
+\label{sec:casiuso}
+
+\subsection{Attori}
+
+\diagramma[0.42\textwidth]{Attori.png}{Attori del sistema}{fig:attori}
+
+\begin{tabularx}{\textwidth}{@{}L{3.6cm}Y@{}}
+\toprule
+\textbf{Attore} & \textbf{Descrizione} \\
+\midrule
+Cliente & Persona che consulta gli eventi e acquista biglietti dal kiosk. \\
+Cassiere & Dipendente della biglietteria che gestisce il catalogo degli eventi. \\
+Servizio di pagamento & Sistema esterno che autorizza o rifiuta l'addebito sulla carta (attore secondario). \\
+Tempo & Attore non umano che rappresenta il trascorrere del tempo e avvia l'annullamento delle prenotazioni scadute. \\
+\bottomrule
+\end{tabularx}
+
+Il sistema stesso e il suo archivio dati non sono attori, perché fanno parte del sistema.
+
+\subsection{Diagramma dei casi d'uso}
+
+\diagramma[0.9\textwidth]{Ticketseller.png}{Diagramma dei casi d'uso}{fig:casiduso}
+
+UC2 e UC3 \emph{includono} UC6: prima di mostrare la mappa e prima di bloccare i posti il sistema libera sempre i posti bloccati da troppo tempo, così il cliente vede la situazione aggiornata. UC4 \emph{estende} UC3: viene eseguito solo se il cliente inserisce un abbonamento. L'attore Tempo avvia UC6; il Servizio di pagamento partecipa all'acquisto.
+
+\subsection{Schede dei casi d'uso}
+
+
+\begin{center}
+\small
+\begin{tabular}{|p{0.86\textwidth}|}
+\hline
+\textbf{Caso d'uso: Consultazione eventi} \\ \hline
+\textbf{ID:} UC1 \\ \hline
+\textbf{Breve descrizione:}\newline Il sistema mostra al cliente gli eventi futuri in programma. \\ \hline
+\textbf{Attori primari:}\newline Cliente \\ \hline
+\textbf{Attori secondari:}\newline Nessuno \\ \hline
+\textbf{Precondizioni:}\newline L'applicazione è avviata in modalità kiosk. \\ \hline
+\textbf{Sequenza degli eventi principale:}\newline 1.~Il caso d'uso inizia quando il Cliente apre la schermata del kiosk o seleziona ``Refresh''.\newline
+2.~Il sistema recupera dal catalogo gli eventi con data futura.\newline
+3.~Il sistema mostra gli eventi in ordine cronologico. \\ \hline
+\textbf{Postcondizioni:}\newline Il Cliente visualizza l'elenco degli eventi futuri. \\ \hline
+\textbf{Sequenza degli eventi alternativa:}\newline 2a.~Se non ci sono eventi futuri, l'elenco è vuoto. \\ \hline
+\end{tabular}
+\end{center}
+
+\begin{center}
+\small
+\begin{tabular}{|p{0.86\textwidth}|}
+\hline
+\textbf{Caso d'uso: Selezione posti} \\ \hline
+\textbf{ID:} UC2 \\ \hline
+\textbf{Breve descrizione:}\newline Il cliente visualizza la mappa dei posti di un evento e seleziona i posti; il sistema mostra il totale. \\ \hline
+\textbf{Attori primari:}\newline Cliente \\ \hline
+\textbf{Attori secondari:}\newline Nessuno \\ \hline
+\textbf{Precondizioni:}\newline Il Cliente visualizza l'elenco degli eventi futuri (UC1). \\ \hline
+\textbf{Sequenza degli eventi principale:}\newline 1.~Il caso d'uso inizia quando il Cliente seleziona un evento.\newline
+2.~include(Annullamento automatico).\newline
+3.~Il sistema mostra la mappa dei posti con stato e prezzo; i posti non disponibili non sono selezionabili.\newline
+4.~Il Cliente seleziona uno o più posti disponibili.\newline
+5.~Il sistema calcola e mostra il totale. \\ \hline
+\textbf{Postcondizioni:}\newline I posti sono selezionati e il totale è visualizzato; nessun posto è ancora bloccato. \\ \hline
+\textbf{Sequenza degli eventi alternativa:}\newline Nessuna. \\ \hline
+\end{tabular}
+\end{center}
+
+\begin{center}
+\small
+\begin{tabular}{|p{0.86\textwidth}|}
+\hline
+\textbf{Caso d'uso: Acquisto titolo di accesso} \\ \hline
+\textbf{ID:} UC3 \\ \hline
+\textbf{Breve descrizione:}\newline Il cliente acquista i posti selezionati: il sistema li blocca, richiede il pagamento e conferma la vendita oppure annulla il blocco. \\ \hline
+\textbf{Attori primari:}\newline Cliente \\ \hline
+\textbf{Attori secondari:}\newline Servizio di pagamento \\ \hline
+\textbf{Precondizioni:}\newline Il Cliente ha selezionato almeno un posto di un evento futuro (UC2). \\ \hline
+\textbf{Sequenza degli eventi principale:}\newline 1.~Il caso d'uso inizia quando il Cliente inserisce nome, e-mail e dati della carta e seleziona ``Buy Selected Seats''.\newline
+2.~include(Annullamento automatico).\newline
+3.~\textbf{if} i posti non sono distinti, non esistono o almeno uno non è disponibile\newline
+\hspace*{1em}3.1.~il sistema mostra un messaggio di errore e il caso d'uso termina.\newline
+4.~Il sistema blocca i posti a nome del Cliente.\newline
+5.~Il sistema calcola il totale con la politica di prezzo in vigore.\newline
+\hspace*{1em}punto di estensione: \emph{applicazione abbonamento}\newline
+6.~Il sistema invia dati della carta e totale al Servizio di pagamento.\newline
+7.~\textbf{if} il pagamento è approvato\newline
+\hspace*{1em}7.1.~il sistema registra i biglietti come venduti al Cliente;\newline
+\hspace*{1em}7.2.~il sistema mostra il codice della transazione.\newline
+8.~\textbf{else}\newline
+\hspace*{1em}8.1.~il sistema annulla il blocco dei posti e mostra l'esito negativo.\newline
+9.~Il sistema aggiorna la mappa dei posti. \\ \hline
+\textbf{Postcondizioni:}\newline I biglietti sono venduti al Cliente, oppure i posti sono di nuovo disponibili. \\ \hline
+\textbf{Sequenza degli eventi alternativa:}\newline 6a.~Se i dati della carta non sono validi, il sistema annulla il blocco dei posti e mostra un messaggio di errore. \\ \hline
+\end{tabular}
+\end{center}
+
+\begin{center}
+\small
+\begin{tabular}{|p{0.86\textwidth}|}
+\hline
+\textbf{Caso d'uso di estensione: Utilizzo abbonamento} \\ \hline
+\textbf{ID:} UC4 \\ \hline
+\textbf{Breve descrizione:}\newline Segmento 1: il cliente indica il codice di un abbonamento e il sistema sconta i biglietti degli eventi coperti. \\ \hline
+\textbf{Attori primari:}\newline Cliente \\ \hline
+\textbf{Attori secondari:}\newline Nessuno \\ \hline
+\textbf{Precondizioni del segmento 1:}\newline È in corso un acquisto (UC3) al punto di estensione \emph{applicazione abbonamento} e il Cliente ha inserito un codice abbonamento. \\ \hline
+\textbf{Sequenza degli eventi del segmento 1:}\newline 1.~Il sistema cerca l'abbonamento con il codice indicato.\newline
+2.~\textbf{for each} biglietto dell'ordine\newline
+\hspace*{1em}2.1.~\textbf{if} l'evento è coperto, il sistema applica lo sconto dell'abbonamento;\newline
+\hspace*{1em}2.2.~\textbf{else} il sistema applica il prezzo pieno.\newline
+3.~Il sistema restituisce a UC3 il totale arrotondato al centesimo. \\ \hline
+\textbf{Postcondizioni del segmento 1:}\newline Il totale tiene conto dell'abbonamento. \\ \hline
+\textbf{Sequenza degli eventi alternativa:}\newline 1a.~Se il codice non esiste, il sistema mostra un messaggio di errore e il totale resta invariato. \\ \hline
+\end{tabular}
+\end{center}
+
+\begin{center}
+\small
+\begin{tabular}{|p{0.86\textwidth}|}
+\hline
+\textbf{Caso d'uso: Gestione catalogo eventi} \\ \hline
+\textbf{ID:} UC5 \\ \hline
+\textbf{Breve descrizione:}\newline Il cassiere crea, modifica o elimina un evento del catalogo. \\ \hline
+\textbf{Attori primari:}\newline Cassiere \\ \hline
+\textbf{Attori secondari:}\newline Nessuno \\ \hline
+\textbf{Precondizioni:}\newline L'applicazione è avviata in modalità cassiere. \\ \hline
+\textbf{Sequenza degli eventi principale:}\newline 1.~Il caso d'uso inizia quando il Cassiere vuole effettuare un'operazione sul catalogo.\newline
+2.~\textbf{if} il Cassiere vuole creare un evento\newline
+\hspace*{1em}2.1.~il Cassiere inserisce identificativo, nome, data, capienza, prezzo e sala;\newline
+\hspace*{1em}2.2.~\textbf{if} il cassiere non è valido, la data è passata o i dati non sono validi, il sistema mostra un errore;\newline
+\hspace*{1em}2.3.~\textbf{else} il sistema memorizza l'evento e ne genera la mappa dei posti.\newline
+3.~\textbf{else if} il Cassiere vuole modificare un evento\newline
+\hspace*{1em}3.1.~il Cassiere seleziona l'evento e ne modifica i dati;\newline
+\hspace*{1em}3.2.~\textbf{if} i controlli non sono superati (cassiere, data, capienza minore dei venduti), il sistema mostra un errore;\newline
+\hspace*{1em}3.3.~\textbf{else} il sistema aggiorna l'evento e la mappa dei posti.\newline
+4.~\textbf{else if} il Cassiere vuole eliminare un evento\newline
+\hspace*{1em}4.1.~\textbf{if} il cassiere non è valido o l'evento ha biglietti venduti o bloccati, il sistema mostra un errore;\newline
+\hspace*{1em}4.2.~\textbf{else} il sistema elimina l'evento e i suoi posti.\newline
+5.~Il sistema aggiorna l'elenco degli eventi. \\ \hline
+\textbf{Postcondizioni:}\newline Il catalogo riflette l'operazione richiesta, oppure è invariato e il Cassiere ha ricevuto un messaggio di errore. \\ \hline
+\textbf{Sequenza degli eventi alternativa:}\newline Nessuna. \\ \hline
+\end{tabular}
+\end{center}
+
+\begin{center}
+\small
+\begin{tabular}{|p{0.86\textwidth}|}
+\hline
+\textbf{Caso d'uso: Annullamento automatico} \\ \hline
+\textbf{ID:} UC6 \\ \hline
+\textbf{Breve descrizione:}\newline Il sistema annulla le prenotazioni temporanee che hanno superato i 15 minuti. \\ \hline
+\textbf{Attori primari:}\newline Tempo \\ \hline
+\textbf{Attori secondari:}\newline Nessuno \\ \hline
+\textbf{Precondizioni:}\newline Nessuna. \\ \hline
+\textbf{Sequenza degli eventi principale:}\newline 1.~Il caso d'uso inizia ogni minuto (attore Tempo) oppure quando è incluso da UC2 o UC3.\newline
+2.~Il sistema acquisisce data e ora correnti.\newline
+3.~\textbf{for each} biglietto\newline
+\hspace*{1em}3.1.~\textbf{if} il biglietto è bloccato da almeno 15 minuti, il sistema annulla il blocco.\newline
+4.~\textbf{if} almeno un biglietto è stato rilasciato, il sistema salva i biglietti aggiornati. \\ \hline
+\textbf{Postcondizioni:}\newline Nessun biglietto risulta bloccato da 15 minuti o più. \\ \hline
+\textbf{Sequenza degli eventi alternativa:}\newline Nessuna. \\ \hline
+\end{tabular}
+\end{center}
+
+\subsection{Matrice di mapping}
+\label{sec:matrice}
+
+La matrice indica quali requisiti funzionali sono realizzati da ciascun caso d'uso: serve a controllare che ogni requisito sia coperto da almeno uno scenario.
+
+\begin{table}[H]
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.5}
+\begin{tabular}{|l|c|c|c|c|c|c|c|c|c|c|c|c|c|}
+\hline
+ & \textbf{RF1} & \textbf{RF2} & \textbf{RF3} & \textbf{RF4} & \textbf{RF5} & \textbf{RF6} & \textbf{RF7} & \textbf{RF8} & \textbf{RF9} & \textbf{RF10} & \textbf{RF11} & \textbf{RF12} & \textbf{RF13} \\
+\hline
+\textbf{UC1} & $\checkmark$ &  &  &  &  &  &  &  &  &  &  &  &  \\ \hline
+\textbf{UC2} &  & $\checkmark$ &  &  & $\checkmark$ &  &  &  & $\checkmark$ &  &  &  &  \\ \hline
+\textbf{UC3} &  &  & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\checkmark$ &  &  &  &  \\ \hline
+\textbf{UC4} &  &  &  &  & $\checkmark$ &  &  &  &  &  &  &  & $\checkmark$ \\ \hline
+\textbf{UC5} &  &  &  &  &  &  &  &  &  & $\checkmark$ & $\checkmark$ & $\checkmark$ &  \\ \hline
+\textbf{UC6} &  &  &  &  &  &  &  &  & $\checkmark$ &  &  &  &  \\ \hline
+\end{tabular}
+\caption{Matrice di mapping casi d'uso -- requisiti funzionali (UC1 Consultazione eventi, UC2 Selezione posti, UC3 Acquisto titolo di accesso, UC4 Utilizzo abbonamento, UC5 Gestione catalogo eventi, UC6 Annullamento automatico)}
+\label{tab:matrice}
+\end{table}

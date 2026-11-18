@@ -1,0 +1,157 @@
+\section{Implementazione}
+\label{sec:implementazione}
+
+\subsection{Tecnologie e struttura}
+
+Il programma è scritto in \textbf{Python 3.11+} con interfaccia grafica \textbf{PyQt6}. Le entità sono \code{dataclass}, le interfacce sono classi astratte (\code{abc}), gli importi usano \code{Decimal} per evitare errori di arrotondamento e i dati sono salvati in un file JSON. I test usano \code{unittest} (PyUnit); i diagrammi sono stati fatti con Enterprise Architect.
+
+Il codice è in \code{src/ticketseller}, con una cartella per ogni parte (\code{views}, \code{controllers}, \code{models}, \code{dao}, \code{patterns}, \code{external_services}). Il file \code{app.py} crea gli oggetti, li passa al controller e apre la finestra richiesta:
+
+\par\noindent\begin{minipage}{\linewidth}
+\begin{lstlisting}
+python -m ticketseller.app kiosk     # postazione del cliente
+python -m ticketseller.app clerk     # postazione del cassiere
+\end{lstlisting}
+\end{minipage}\par
+
+Negli estratti seguenti sono stati tolti commenti, docstring e alcune annotazioni di tipo.
+
+\subsection{Controller}
+
+Il controller riceve dall'esterno tutto quello che usa (DAO, servizio di pagamento, strategie di prezzo): così nei test si possono passare oggetti di prova.
+
+\par\noindent\begin{minipage}{\linewidth}
+\begin{lstlisting}
+class TicketSeller:
+    reservation_timeout = timedelta(minutes=15)
+
+    def __init__(self, event_dao, ticket_dao, payment_service, pricing_strategy,
+                 subscription_strategy=None, subscription_dao=None):
+        self.event_dao = event_dao
+        self.ticket_dao = ticket_dao
+        self.payment_service = payment_service
+        self.pricing_strategy = pricing_strategy
+        self.subscription_strategy = subscription_strategy
+        self.subscription_dao = subscription_dao
+        self._reservation_lock = RLock()
+\end{lstlisting}
+\end{minipage}\par
+
+\subsection{Acquisto}
+
+\code{purchase_access_title} esegue l'acquisto (UC3): blocca i posti, calcola il totale, chiede il pagamento e poi conferma la vendita o libera i posti. Se i dati della carta non sono validi il pagamento solleva un errore: prima di passarlo alla finestra, i posti vengono liberati.
+
+\par\noindent\begin{minipage}{\linewidth}
+\begin{lstlisting}
+def purchase_access_title(self, event_id, seat_ids, customer, payment_data, subscription=None):
+    tickets = self.reserve_seats(event_id, seat_ids, customer)
+    try:
+        total = self.calculate_total(tickets, subscription)
+        result = self.payment_service.process_payment(payment_data, total)
+    except ValueError:
+        self.cancel_reservation(tickets)
+        raise
+    if result.approved:
+        self.confirm_sale(tickets, customer)
+    else:
+        self.cancel_reservation(tickets)
+    return result
+\end{lstlisting}
+\end{minipage}\par
+
+In \code{reserve_seats} il controllo dei posti e il blocco avvengono sotto un lock, così due richieste contemporanee non possono prendere lo stesso posto (RNF3):
+
+\par\noindent\begin{minipage}{\linewidth}
+\begin{lstlisting}
+def reserve_seats(self, event_id, seat_ids, customer=None):
+    with self._reservation_lock:
+        self.release_expired_reservations(event_id)
+        if len({str(seat_id) for seat_id in seat_ids}) != len(seat_ids):
+            raise ValueError("Duplicate seats cannot be selected.")
+        tickets = self.ticket_dao.find_tickets_by_seats(event_id, seat_ids)
+        if not tickets:
+            raise ValueError("At least one seat must be selected.")
+        if any(not ticket.is_available() for ticket in tickets):
+            raise ValueError("One or more selected seats are not available.")
+        for ticket in tickets:
+            ticket.reserve(customer)
+        return self.ticket_dao.save_tickets(tickets)
+\end{lstlisting}
+\end{minipage}\par
+
+\subsection{Pattern State}
+
+Il biglietto non decide da solo cosa fare: passa la richiesta al suo stato corrente, che controlla se l'operazione è permessa e cambia stato.
+
+\par\noindent\begin{minipage}{\linewidth}
+\begin{lstlisting}
+class Ticket(Voucher):
+    def reserve(self, customer=None):
+        self.state.reserve(self, customer)
+
+    def cancel(self):
+        self.state.cancel(self)
+
+    def confirm_sale(self, customer):
+        self.state.confirm_sale(self, customer)
+
+
+class LockedState(TicketState):
+    def reserve(self, ticket, customer=None):
+        raise ValueError("Ticket is already locked.")
+
+    def cancel(self, ticket):
+        ticket.set_state(AvailableState())
+        ticket.locked_at = None
+        ticket.owner = None
+
+    def confirm_sale(self, ticket, customer):
+        if ticket.owner is not None and ticket.owner != customer:
+            raise ValueError("Ticket is locked by another customer.")
+        ticket.set_state(SoldState())
+        ticket.locked_at = None
+        ticket.owner = customer
+\end{lstlisting}
+\end{minipage}\par
+
+\subsection{Pattern Strategy}
+
+Ogni politica di prezzo è una classe con il metodo \code{calculate_total}. Il controller usa la strategia per gli abbonamenti quando il cliente ne indica uno, altrimenti quella normale.
+
+\par\noindent\begin{minipage}{\linewidth}
+\begin{lstlisting}
+def calculate_total(self, tickets, subscription=None):
+    strategy = self.pricing_strategy
+    if subscription is not None and self.subscription_strategy is not None:
+        strategy = self.subscription_strategy
+    return strategy.calculate_total(tickets, subscription)
+
+
+class SubscriptionPricing(PricingStrategy):
+    def calculate_total(self, tickets, subscription=None):
+        if subscription is None:
+            raise ValueError("Subscription pricing requires a subscription.")
+        discount_rate = subscription.discount_rate if subscription.discount_rate is not None else Decimal("1.00")
+        total = Decimal("0.00")
+        for ticket in tickets:
+            if ticket.event_id in subscription.covered_event_ids:
+                total += ticket.base_price * (Decimal("1.00") - discount_rate)
+            else:
+                total += ticket.base_price
+        return quantize_money(total)
+\end{lstlisting}
+\end{minipage}\par
+
+\subsection{Persistenza e rilascio dei posti}
+
+\code{TicketDB} tiene i dati in memoria e a ogni modifica riscrive il file \code{database.json}; all'avvio lo rilegge. Il resto del programma non sa che i dati stanno in un file, perché usa solo le interfacce DAO: per passare a un database basterebbe un'altra classe che le realizza.
+
+Il kiosk avvia un timer che ogni minuto libera i posti bloccati da più di 15 minuti (attore Tempo, UC6):
+
+\par\noindent\begin{minipage}{\linewidth}
+\begin{lstlisting}
+self.release_timer = QTimer(self)
+self.release_timer.timeout.connect(self._release_expired_reservations)
+self.release_timer.start(60_000)
+\end{lstlisting}
+\end{minipage}\par

@@ -1,0 +1,12 @@
+\section{Mockup}
+\label{sec:mockup}
+
+Le schermate seguenti sono le interfacce realizzate con PyQt6.
+
+\diagramma[0.72\textwidth]{kiosk.png}{Interfaccia del kiosk (cliente)}{fig:kiosk}
+
+In alto il cliente sceglie l'evento (UC1); sotto compare la mappa dei posti con codice, stato e prezzo, dove i posti bloccati o venduti non sono selezionabili (UC2). Il totale si aggiorna a ogni selezione e tiene conto dell'eventuale codice abbonamento (UC4): nell'esempio due posti da 30,00 con l'abbonamento al 50\% danno 30,00. Nel riquadro \emph{Payment} il cliente inserisce i suoi dati e quelli della carta; \emph{Buy Selected Seats} avvia l'acquisto (UC3) e l'esito è mostrato in una finestra di dialogo. \emph{Refresh} ricarica gli eventi.
+
+\diagramma[0.72\textwidth]{clerk.png}{Interfaccia del cassiere}{fig:clerk}
+
+La postazione del cassiere mostra gli eventi futuri; selezionandone uno il modulo si compila con i suoi dati. I pulsanti \emph{Create}, \emph{Update} e \emph{Delete} eseguono le operazioni di UC5 e gli eventuali errori di validazione sono mostrati in una finestra di dialogo.

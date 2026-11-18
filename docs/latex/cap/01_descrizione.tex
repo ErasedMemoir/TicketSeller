@@ -1,0 +1,16 @@
+\section{Descrizione del progetto}
+\label{sec:descrizione}
+
+TicketSeller è un programma per vendere biglietti di eventi come concerti, spettacoli teatrali e altri eventi culturali. Lo usano due tipi di persone: i \emph{clienti}, che comprano i biglietti da soli su una postazione self-service chiamata \emph{kiosk}, e i \emph{cassieri}, cioè i dipendenti della biglietteria che gestiscono l'elenco degli eventi.
+
+Per ogni evento si registrano il nome, la data e l'ora, la sala, una descrizione facoltativa, il numero di posti e il prezzo del biglietto. Ogni posto dell'evento ha un suo biglietto, che può essere \emph{disponibile}, \emph{bloccato} (riservato per pochi minuti a un cliente che sta pagando) oppure \emph{venduto}.
+
+Il cliente vede l'elenco degli eventi in programma, ne sceglie uno e vede la mappa dei posti con lo stato e il prezzo di ciascuno. Seleziona i posti liberi che vuole e il programma gli mostra il totale. Poi inserisce nome, e-mail e dati della carta di credito e conferma l'acquisto.
+
+A quel punto il programma controlla che i posti siano ancora liberi e li blocca a nome del cliente, così nessun altro può prenderli. Calcola il totale e chiede il pagamento al servizio della carta di credito (nel progetto il pagamento è simulato). Se il pagamento va a buon fine i biglietti diventano venduti e il cliente riceve un codice che vale come biglietto; se il pagamento non va a buon fine, oppure i dati della carta sono sbagliati, i posti tornano liberi. Un posto non può restare bloccato più di 15 minuti: passato questo tempo torna libero da solo.
+
+Il prezzo può essere calcolato in tre modi: prezzo normale, sconto per i gruppi (sconto in percentuale da un certo numero di biglietti in su) e abbonamento. Un abbonamento ha un codice, vale per alcuni eventi e dà uno sconto: se il cliente inserisce il codice, i biglietti degli eventi compresi nell'abbonamento costano meno, gli altri hanno il prezzo normale.
+
+Il cassiere può aggiungere nuovi eventi, purché in una data futura, modificarli (senza scendere sotto il numero di biglietti già venduti) ed eliminarli, purché nessun biglietto sia stato venduto o sia in fase di pagamento.
+
+I dati vengono salvati sul computer, così restano disponibili anche dopo aver chiuso il programma.

@@ -1,0 +1,36 @@
+\section{Glossario dei termini}
+\label{sec:glossario}
+
+Il glossario spiega i termini che possono creare confusione. Per ognuno è indicato se è un termine del dominio (business) o tecnico e con quali altri nomi compare nel documento o nel programma.
+
+\small
+\begin{center}
+\begin{tabular}{@{}L{2.9cm}L{7.0cm}L{1.5cm}L{3.0cm}@{}}
+\toprule
+\textbf{Termine} & \textbf{Descrizione} & \textbf{Tipo} & \textbf{Sinonimi} \\
+\midrule
+Evento & Spettacolo in una data e in una sala per il quale si vendono biglietti. & Business & Event \\
+Catalogo & Insieme degli eventi gestiti dal sistema. & Business & Catalogo eventi \\
+Sala & Luogo in cui si svolge l'evento. & Business & Venue \\
+Capienza & Numero di posti dell'evento. & Business & Capacity \\
+Posto & Singolo posto numerato di un evento. & Business & Seat \\
+Mappa dei posti & Elenco dei posti di un evento con stato e prezzo. & Business & Pianta dei posti, seating map \\
+Biglietto & Titolo di accesso relativo a un posto di un evento. & Business & Ticket \\
+Titolo di accesso & Documento che dà diritto ad accedere a uno o più eventi: biglietto o abbonamento. & Business & Voucher \\
+Abbonamento & Titolo di accesso, identificato da un codice, che copre un insieme di eventi e prevede uno sconto sui relativi biglietti. & Business & Subscription \\
+Prezzo base & Prezzo pieno di un biglietto dell'evento. & Business & Base price \\
+Politica di prezzo & Regola con cui si calcola il totale: standard, gruppo o abbonamento. & Business & Strategia di prezzo \\
+Prenotazione temporanea & Blocco di uno o più posti a nome di un cliente durante l'acquisto, per al massimo 15 minuti. & Business & Blocco, posto bloccato, locked \\
+Acquisto & Blocco dei posti, calcolo del totale, pagamento e conferma o annullamento. & Business & Checkout, vendita \\
+Cliente & Persona che acquista biglietti dal kiosk. & Business & Customer \\
+Cassiere & Dipendente della biglietteria che gestisce il catalogo. & Business & Clerk \\
+Utente & Chi usa il sistema (cliente o cassiere). & Tecnico & User \\
+Kiosk & Postazione self-service del cliente. & Tecnico & KioskInterface \\
+Postazione cassiere & Postazione per la gestione del catalogo. & Tecnico & ClerkInterface \\
+Servizio di pagamento & Sistema esterno che autorizza o rifiuta l'addebito sulla carta; nel prototipo è simulato. & Tecnico & CreditCardCharges \\
+Codice di transazione & Identificativo restituito per un pagamento approvato; è mostrato al cliente come titolo di accesso. & Tecnico & Transaction id \\
+Archivio dati & File sul computer in cui sono salvati eventi, biglietti e abbonamenti. & Tecnico & Persistenza, database \\
+\bottomrule
+\end{tabular}
+\end{center}
+\normalsize

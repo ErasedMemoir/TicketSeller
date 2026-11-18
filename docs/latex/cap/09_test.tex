@@ -1,0 +1,95 @@
+\section{Test}
+\label{sec:test}
+
+\subsection{Come sono fatti i test}
+
+I test sono scritti con \code{unittest} (PyUnit), si trovano nella cartella \code{tests} e si eseguono con
+
+\par\noindent\begin{minipage}{\linewidth}
+\begin{lstlisting}
+python -m unittest discover -s tests -v
+\end{lstlisting}
+\end{minipage}\par
+
+Sono \textbf{65 test} e passano tutti.
+
+Ogni test parte da dati nuovi, creati nel metodo \code{setUp}, quindi i test non dipendono l'uno dall'altro. Stati, strategie di prezzo e modelli sono provati da soli (test di unità). Il controller è provato insieme al DAO tenuto in memoria, senza file (test di integrazione); al posto del servizio di pagamento vero si usa un oggetto di prova, \code{FixedPaymentService}, che risponde sempre allo stesso modo (\emph{stub}). I casi sono scelti a partire dai requisiti, provando sia i dati giusti sia quelli sbagliati (posti liberi, bloccati, venduti, inesistenti; carte valide e scadute) e i valori al limite (timeout a 15 minuti esatti, sconto del 0\% e del 100\%).
+
+{\small
+\begin{tabularx}{\textwidth}{@{}L{6.0cm}Y@{}}
+\toprule
+\textbf{File} & \textbf{Cosa verifica} \\
+\midrule
+\code{test_ticket_state.py} & Passaggi di stato del biglietto e operazioni non permesse. \\
+\code{test_pricing_strategy.py} & Prezzo normale, sconto di gruppo, abbonamento, arrotondamento al centesimo. \\
+\code{test_ticket_seller_controller.py} & Acquisto approvato e rifiutato, posti duplicati, timeout, gestione degli eventi. \\
+\code{test_requirements.py} & Un test per ogni requisito e i casi corretti durante lo sviluppo. \\
+\code{test_subscription.py} & Ricerca dell'abbonamento per codice e acquisto scontato. \\
+\code{test_ticket_db.py} & Salvataggio e lettura dal file, mappa dei posti, vincoli sugli eventi. \\
+\code{test_payment_service.py}, \code{test_model_validation.py}, \code{test_utils.py} & Controllo dei dati della carta, dei modelli e delle date. \\
+\bottomrule
+\end{tabularx}}
+
+\subsection{Esempi}
+
+Pagamento approvato: il biglietto risulta venduto.
+
+\par\noindent\begin{minipage}{\linewidth}
+\begin{lstlisting}
+def test_successful_purchase_sells_ticket(self) -> None:
+    controller = TicketSeller(self.db, self.db, FixedPaymentService(True), StandardPricing())
+    result = controller.purchase_access_title(EventId(1), [SeatId("S001")], self.customer, self.payment)
+    ticket = self.db.find_tickets_by_seats(EventId(1), [SeatId("S001")])[0]
+    self.assertTrue(result.approved)
+    self.assertEqual("sold", ticket.state.name())
+\end{lstlisting}
+\end{minipage}\par
+
+Carta non valida: viene segnalato l'errore e il posto torna disponibile.
+
+\par\noindent\begin{minipage}{\linewidth}
+\begin{lstlisting}
+def test_rf8_invalid_card_releases_reserved_seats(self) -> None:
+    controller = TicketSeller(self.db, self.db, CreditCardCharges(success_rate=1.0), StandardPricing())
+    bad_card = PaymentData("Alice Buyer", "not-a-card", 12, 2099, "123")
+    with self.assertRaises(ValueError):
+        controller.purchase_access_title(EventId(1), [SeatId("S001")], self.customer, bad_card)
+    self.assertEqual("available", self._ticket("S001").state.name())
+\end{lstlisting}
+\end{minipage}\par
+
+\subsection{Requisiti e test}
+
+\small
+\begin{center}
+\begin{tabular}{@{}L{1.8cm}L{12.3cm}@{}}
+\toprule
+\textbf{Requisito} & \textbf{Test principale} \\
+\midrule
+RF1 & \code{test_rf1_search_future_events_excludes_past_events} \\
+RF2 & \code{test_rf2_seating_map_lists_every_seat_with_state} \\
+RF3 & \code{test_rf3_check_availability_reports_locked_seats}, \code{test_rf4_reserve_locks_seats_for_customer} \\
+RF4 & \code{test_invalid_card_number_is_rejected} \\
+RF5 & \code{test_rf5_runtime_strategy_change_applies_group_discount} \\
+RF6 & \code{test_rf6_payment_service_receives_computed_total} \\
+RF7 & \code{test_successful_purchase_sells_ticket} \\
+RF8 & \code{test_declined_purchase_releases_ticket}, \code{test_rf8_invalid_card_releases_reserved_seats} \\
+RF9, RNF7 & \code{test_rf9_rnf7_timeout_boundary} \\
+RF10 & \code{test_rf10_clerk_creates_event_with_seating_map} \\
+RF11 & \code{test_rf11_clerk_updates_event} \\
+RF12 & \code{test_rf12_clerk_deletes_event}, \code{test_delete_event_with_reserved_ticket_is_rejected} \\
+RF13 & \code{test_rf13_subscription_purchase_charges_discounted_amount} \\
+RNF3 & \code{test_rnf3_concurrent_reservations_allow_one_winner} \\
+RNF4 & \code{test_money_is_rounded_half_up} \\
+RNF5 & \code{test_rnf5_json_roundtrip_preserves_states_owner_and_lock_time} \\
+\bottomrule
+\end{tabular}
+\end{center}
+\normalsize
+
+\section*{Conclusioni}
+\addcontentsline{toc}{section}{Conclusioni}
+
+Il progetto segue tutte le fasi viste nel corso, dai requisiti ai test. L'architettura MVC tiene separate le finestre, la logica e i dati; il DAO nasconde il modo in cui i dati sono salvati; i pattern State e Strategy rendono chiare le regole sui biglietti e sui prezzi.
+
+Il prototipo ha alcuni limiti: il pagamento è simulato, il cassiere non deve autenticarsi e si assume che sull'archivio lavori una postazione alla volta. Per usarlo con più postazioni basterebbe sostituire il file con un database, cambiando solo la classe \code{TicketDB}.

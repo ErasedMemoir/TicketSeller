@@ -1,0 +1,122 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[italian]{babel}
+\usepackage{lmodern}
+\usepackage[a4paper,top=2.3cm,bottom=2.4cm,left=2.3cm,right=2.3cm,headheight=15pt]{geometry}
+\usepackage{xcolor}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{microtype}
+\usepackage{amssymb}
+\usepackage{caption}
+\usepackage{listings}
+\usepackage{xurl}
+\usepackage[hidelinks]{hyperref}
+\usepackage{ragged2e}
+\usepackage{needspace}
+
+\graphicspath{{img/}}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\small TicketSeller}
+\rhead{\small Ingegneria del Software}
+\cfoot{\thepage}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt}
+\setlength{\extrarowheight}{2pt}
+\renewcommand{\arraystretch}{1.15}
+\emergencystretch=3em
+
+\setlist[itemize]{leftmargin=*,itemsep=2pt,topsep=3pt}
+\setlist[enumerate]{leftmargin=*,itemsep=2pt,topsep=3pt}
+
+\newcolumntype{Y}{>{\RaggedRight\arraybackslash}X}
+\newcolumntype{L}[1]{>{\RaggedRight\arraybackslash}p{#1}}
+
+\captionsetup{font=small,labelfont=bf}
+
+\newcommand{\code}[1]{\texttt{\detokenize{#1}}}
+
+% Diagramma: \diagramma[larghezza]{file}{didascalia}{etichetta}
+\newcommand{\diagramma}[4][\textwidth]{%
+\begin{figure}[H]
+\centering
+\includegraphics[width=#1,height=0.80\textheight,keepaspectratio]{#2}
+\caption{#3}
+\label{#4}
+\end{figure}}
+
+\definecolor{codebg}{gray}{0.96}
+\lstset{
+  language=Python,
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\bfseries\color{blue!55!black},
+  stringstyle=\color{green!40!black},
+  commentstyle=\itshape\color{gray},
+  backgroundcolor=\color{codebg},
+  frame=single, framerule=0pt,
+  columns=fullflexible, keepspaces=true,
+  breaklines=true, showstringspaces=false,
+  xleftmargin=4pt, xrightmargin=4pt, aboveskip=6pt, belowskip=6pt
+}
+
+\newcommand{\sectionbreak}{\needspace{0.3\textheight}}
+\newcommand{\subsectionbreak}{\needspace{0.15\textheight}}
+\titleformat{\section}{\normalfont\Large\bfseries}{\thesection}{0.7em}{}
+\titleformat{\subsection}{\normalfont\large\bfseries}{\thesubsection}{0.7em}{}
+\titleformat{\subsubsection}{\normalfont\normalsize\bfseries}{\thesubsubsection}{0.7em}{}
+
+\begin{document}
+
+\begin{titlepage}
+\centering
+\vspace*{0.8cm}
+\includegraphics[width=0.28\textwidth]{logo_univpm.png}\par
+\vspace{0.9cm}
+{\Large\textbf{Università Politecnica delle Marche}\par}
+\vspace{0.2cm}
+{\large Corso di Ingegneria del Software\par}
+\vspace{2.2cm}
+{\Huge\bfseries TicketSeller\par}
+\vspace{0.4cm}
+{\Large Sistema di vendita di biglietti per eventi\par}
+\vspace{0.2cm}
+{\large Documentazione di progetto\par}
+\vfill
+\begin{tabular}{@{}ll@{}}
+\textbf{Docente:} & Prof. Domenico Ursino \\[2pt]
+\textbf{Esercitatore:} & Davide Traini \\[2pt]
+\textbf{Studente:} & Kullolli Aaron \\
+\end{tabular}
+\vspace{1.5cm}
+
+{\large Anno Accademico 2025--2026\par}
+\end{titlepage}
+
+\pagenumbering{roman}
+\tableofcontents
+\newpage
+\pagenumbering{arabic}
+
+\input{cap/01_descrizione}
+\input{cap/02_glossario}
+\input{cap/03_requisiti}
+\input{cap/04_casi_uso}
+\input{cap/05_analisi}
+\input{cap/06_progettazione}
+\input{cap/07_mockup}
+\input{cap/08_implementazione}
+\input{cap/09_test}
+
+\end{document}

@@ -1,0 +1,92 @@
+\section{Progettazione}
+\label{sec:progettazione}
+
+\subsection{Architettura}
+
+TicketSeller segue il pattern architetturale \textbf{Model--View--Controller}, con uno strato \textbf{DAO} per l'accesso ai dati.
+
+\begin{tabularx}{\textwidth}{@{}L{2.9cm}Y@{}}
+\toprule
+\textbf{Strato} & \textbf{Responsabilità} \\
+\midrule
+View & \code{KioskInterface} e \code{ClerkInterface} (PyQt6): ricevono l'input, lo passano al controller e mostrano risultati ed errori. \\
+Controller & \code{TicketSeller}: coordina i casi d'uso, applica le regole applicative (blocco dei posti, timeout, controllo del cassiere) e usa DAO, strategie di prezzo e servizio di pagamento. \\
+Model & Entità \code{Event}, \code{Voucher}, \code{Ticket}, \code{Subscription}, \code{User}, \code{Customer}, \code{Clerk}; stati del biglietto (State) e politiche di prezzo (Strategy). \\
+DAO & Interfacce \code{EventDAO}, \code{TicketDAO}, \code{SubscriptionDAO}; implementazione \code{TicketDB} su file JSON. \\
+Servizi esterni & \code{CreditCardCharges}, adattatore (simulato) verso il servizio di pagamento, conforme a \code{PaymentService}. \\
+\bottomrule
+\end{tabularx}
+
+Le scelte seguono i principi di progettazione del corso:
+
+\begin{itemize}
+    \item \textbf{coesione}: ogni package ha responsabilità omogenee (vista, controllo, dominio, persistenza, pagamento);
+    \item \textbf{basso accoppiamento e astrazione}: il controller dipende dalle interfacce \code{EventDAO}, \code{TicketDAO}, \code{SubscriptionDAO}, \code{PricingStrategy} e \code{PaymentService} e riceve le implementazioni nel costruttore (le crea \code{app.py});
+    \item \textbf{incapsulamento}: le regole sulle transizioni del biglietto stanno negli oggetti stato, non nel controller;
+    \item \textbf{flessibilità}: una nuova politica di prezzo si aggiunge con una nuova strategia, senza modificare il controller;
+    \item \textbf{testabilità}: la logica non dipende dalla GUI e il pagamento può essere sostituito da uno stub nei test;
+    \item \textbf{progettazione difensiva}: i dati sono validati ai confini (costruttori dei modelli, dati della carta, controller) e gli errori sono segnalati con eccezioni mostrate dalla vista.
+\end{itemize}
+
+Rispetto alla forma classica del pattern MVC, in cui il model notifica le viste a ogni modifica, in TicketSeller è la vista che, dopo ogni operazione, richiede i dati aggiornati al controller.
+
+\subsection{Classi di progettazione}
+
+\diagramma[0.72\textwidth]{CLS_-_Classi_di_progettazione.png}{Package di progettazione e dipendenze}{fig:cls}
+
+I package corrispondono alle cartelle di \code{src/ticketseller}: \code{views}, \code{controllers}, \code{models}, \code{dao}, \code{patterns} (\code{state} e \code{strategy}) ed \code{external_services}. Le classi indicate come interfacce sono, in Python, classi astratte (\code{ABC} con metodi \code{@abstractmethod}); \code{PaymentService} è un \code{Protocol}, realizzato da \code{CreditCardCharges}.
+
+\subsubsection*{Package controllers}
+\diagramma{controllers.png}{Classi di progettazione: controllers}{fig:cls-controllers}
+\code{TicketSeller} è l'unico controller. Riceve nel costruttore i DAO, il servizio di pagamento, la strategia di prezzo normale e quella per gli abbonamenti; \code{_reservation_lock} protegge le operazioni sui posti.
+
+\subsubsection*{Package models}
+\diagramma[0.9\textwidth]{models.png}{Classi di progettazione: models}{fig:cls-models}
+\code{Ticket} è il contesto del pattern State: il suo attributo \code{state} punta allo stato corrente.
+
+\subsubsection*{Package dao}
+\diagramma{dao.png}{Classi di progettazione: dao}{fig:cls-dao}
+\code{TicketDB} realizza le tre interfacce DAO e nasconde il formato di memorizzazione (file JSON): per passare a un database basta un'altra classe che realizza le stesse interfacce.
+
+\subsubsection*{Package patterns}
+\diagramma[0.85\textwidth]{state.png}{Classi di progettazione: pattern State}{fig:cls-state}
+\diagramma{strategy.png}{Classi di progettazione: pattern Strategy}{fig:cls-strategy}
+
+\subsubsection*{Package external\_services}
+\diagramma[0.85\textwidth]{external_services.png}{Classi di progettazione: external\_services}{fig:cls-ext}
+
+\subsubsection*{Package views}
+\diagramma[0.75\textwidth]{views.png}{Classi di progettazione: views}{fig:cls-views}
+Le due viste ereditano da \code{QWidget} e conoscono solo il controller.
+
+\subsection{Diagramma dei componenti}
+
+\diagramma[0.9\textwidth]{CMP_-_Componenti_TicketSeller.png}{Diagramma dei componenti}{fig:cmp}
+
+Le viste usano l'interfaccia del controller \code{TicketSeller}, che a sua volta richiede le interfacce \code{TicketDAO}, \code{SubscriptionDAO}, \code{EventDAO} (fornite dal componente DAO, realizzato da \code{TicketDB}), \code{PricingStrategy} (fornita dalle strategie) e \code{PaymentService} (fornita da \code{CreditCardCharges}). Il componente \code{Models} richiede l'interfaccia \code{TicketState}, fornita dagli stati.
+
+\subsection{Macchina a stati del biglietto}
+
+\diagramma[0.85\textwidth]{STM_-_Stato_Ticket.png}{Macchina a stati del biglietto}{fig:stm}
+
+\begin{tabularx}{\textwidth}{@{}L{1.9cm}L{1.9cm}Y@{}}
+\toprule
+\textbf{Da} & \textbf{A} & \textbf{Evento [guardia] / azione} \\
+\midrule
+(iniziale) & Available & creazione del biglietto con l'evento \\
+Available & Locked & \code{reserve(customer)} \\
+Locked & Available & \code{cancel} [pagamento rifiutato o errore nel pagamento] \\
+Locked & Available & quando now $-$ \code{locked_at} $\geq$ 15 min / \code{cancel()} \\
+Locked & Sold & \code{confirm_sale(customer)} \\
+Available, Locked & (finale) & \code{delete_event} \\
+Sold & (finale) & fine del processo di vendita \\
+\bottomrule
+\end{tabularx}
+
+Le operazioni non ammesse nello stato corrente (ad esempio \code{confirm_sale} su un biglietto disponibile, o qualsiasi operazione su un biglietto venduto) sollevano un errore e lasciano il biglietto nello stato in cui si trova.
+
+\subsection{Diagramma di deployment}
+
+\diagramma[0.9\textwidth]{DEP_-_Deployment_TicketSeller.png}{Diagramma di deployment}{fig:dep}
+
+L'applicazione è un programma desktop. Ogni postazione (PC Windows, macOS o Linux) esegue in un interprete Python~3.11+ con PyQt6 lo stesso artefatto \code{ticketseller}, avviato in modalità kiosk o cassiere, che legge e scrive il file \code{database.json}. Si assume che sull'archivio lavori una postazione alla volta. L'artefatto manifesta i componenti \code{KioskInterface}, \code{ClerkInterface}, \code{TicketSeller} e \code{TicketDB}. L'agenzia delle carte di credito è un sistema esterno, simulato nel prototipo.

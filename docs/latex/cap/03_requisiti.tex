@@ -1,0 +1,43 @@
+\section{Analisi dei requisiti}
+\label{sec:requisiti}
+
+I requisiti funzionali dicono cosa deve fare il sistema; quelli non funzionali indicano vincoli e qualità che deve rispettare. Ogni requisito ha un codice e un nome, gli stessi del diagramma, ed è scritto in modo da poter verificare se è rispettato. I requisiti funzionali sono divisi in due aree: gestione degli eventi e gestione delle vendite.
+
+\diagramma[0.95\textwidth]{Analisi_dei_Requisiti.png}{Diagramma dei requisiti}{fig:requisiti}
+
+\subsection{Requisiti funzionali}
+
+\textbf{Area: Gestione Eventi}
+
+\begin{description}[style=nextline,leftmargin=0.6cm,itemsep=3pt]
+\item[RF1 -- Mostra eventi futuri] Quando il cliente apre o aggiorna la schermata del kiosk, il sistema dovrà mostrare l'elenco degli eventi con data futura, in ordine cronologico.
+\item[RF2 -- Mostra mappa posti] Quando il cliente seleziona un evento, il sistema dovrà mostrare la mappa dei posti dell'evento con lo stato (disponibile, bloccato, venduto) e il prezzo di ciascun posto, consentendo di selezionare solo i posti disponibili.
+\item[RF10 -- Cassiere crea evento futuro] Quando il cassiere inserisce i dati di un nuovo evento (identificativo, nome, data, capienza, prezzo base, sala), il sistema dovrà memorizzare l'evento nel catalogo e generarne la mappa dei posti; dovrà rifiutare eventi con data passata, nome vuoto, capienza non positiva, prezzo negativo o identificativo già esistente.
+\item[RF11 -- Cassiere aggiorna evento futuro] Quando il cassiere modifica i dati di un evento esistente, il sistema dovrà aggiornare l'evento, la sua mappa dei posti e il prezzo dei posti ancora disponibili; dovrà rifiutare date passate e capienze inferiori al numero di biglietti già venduti.
+\item[RF12 -- Cassiere elimina evento futuro] Quando il cassiere richiede l'eliminazione di un evento senza biglietti venduti o bloccati, il sistema dovrà eliminare l'evento e i relativi posti dal catalogo; altrimenti dovrà rifiutare l'operazione.
+\end{description}
+
+\textbf{Area: Gestione Vendite}
+
+\begin{description}[style=nextline,leftmargin=0.6cm,itemsep=3pt]
+\item[RF3 -- Prenotazione temporanea posti] Quando il cliente conferma l'acquisto dei posti selezionati, il sistema dovrà verificare che tutti i posti esistano, siano distinti e siano disponibili e, in caso positivo, bloccarli temporaneamente a nome del cliente; se almeno un posto non è disponibile dovrà rifiutare l'intera richiesta.
+\item[RF4 -- Inserimento dati carta di credito] Il sistema dovrà consentire al cliente di inserire i dati della carta di credito (titolare, numero, mese e anno di scadenza, CVV) e dovrà rifiutare dati formalmente non validi: titolare vuoto, numero non numerico o con meno di 12 cifre, mese non compreso tra 1 e 12, carta scaduta, CVV diverso da 3 o 4 cifre.
+\item[RF5 -- Calcolo totale ordine] Quando il cliente seleziona uno o più posti, il sistema dovrà calcolare il totale dell'ordine applicando la politica di prezzo in vigore e mostrarlo al cliente; lo stesso calcolo dovrà essere ripetuto al momento dell'acquisto sui posti bloccati.
+\item[RF6 -- Invio pagamento a servizio esterno] Quando i posti sono stati bloccati e il totale è stato calcolato, il sistema dovrà inviare al servizio di pagamento esterno i dati della carta e l'importo totale.
+\item[RF7 -- Conferma vendita e rilascio titoli] Quando il servizio di pagamento approva il pagamento, il sistema dovrà registrare i biglietti bloccati come venduti al cliente e mostrargli il codice della transazione, che costituisce il titolo di accesso.
+\item[RF8 -- Annulla prenotazione se rifiutato] Quando il pagamento è rifiutato dal servizio di pagamento o non può essere eseguito perché i dati della carta non sono validi, il sistema dovrà annullare il blocco dei posti, rendendoli di nuovo disponibili, e informare il cliente dell'esito.
+\item[RF9 -- Rilascia biglietti a timeout scaduto] Quando un posto rimane bloccato per 15 minuti o più senza che l'acquisto sia stato concluso, il sistema dovrà renderlo nuovamente disponibile entro un minuto, e comunque prima di mostrare la mappa dei posti o di bloccare posti dello stesso evento.
+\item[RF13 -- Applica abbonamento al totale] Quando il cliente indica il codice di un abbonamento durante l'acquisto, il sistema dovrà applicare lo sconto dell'abbonamento ai biglietti degli eventi coperti e il prezzo pieno ai biglietti degli altri eventi; un codice inesistente dovrà essere rifiutato.
+\end{description}
+
+\subsection{Requisiti non funzionali}
+
+\begin{description}[style=nextline,leftmargin=0.6cm,itemsep=3pt]
+\item[RNF1 -- Implementazione in Python 3] Vincolo: il sistema dovrà essere realizzato in linguaggio Python 3, versione 3.11 o successiva.
+\item[RNF2 -- Fornire interfaccia GUI desktop con PyQt] Vincolo: il sistema dovrà fornire due interfacce grafiche desktop realizzate con PyQt6, una per il cliente (kiosk) e una per il cassiere.
+\item[RNF3 -- Prevenzione doppie prenotazioni (accessi concorrenti)] Il sistema non dovrà mai bloccare o vendere lo stesso posto a due clienti: se più richieste sullo stesso posto arrivano nello stesso momento, al più una dovrà andare a buon fine.
+\item[RNF4 -- Precisione decimale esatta degli importi] Tutti gli importi monetari dovranno essere rappresentati e calcolati in aritmetica decimale esatta, con risultato arrotondato al centesimo di euro (ad esempio $0{,}10 + 0{,}20 = 0{,}30$ e $5{,}025 \rightarrow 5{,}03$).
+\item[RNF5 -- Persistenza astratta e separata dalla logica di business] I dati di eventi, biglietti e abbonamenti dovranno essere conservati tra due esecuzioni del programma e la logica applicativa dovrà accedervi solo tramite interfacce dedicate (DAO), così che il modo di salvare i dati (oggi un file) possa essere cambiato senza modificarla.
+\item[RNF6 -- Testing unitario isolato] Le classi del modello, del controller e della persistenza dovranno poter essere verificate con test PyUnit automatici eseguibili senza interfaccia grafica e senza il servizio di pagamento reale.
+\item[RNF7 -- Timeout massimo della prenotazione temporanea] La durata massima di una prenotazione temporanea dovrà essere di 15 minuti.
+\end{description}
