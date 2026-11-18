@@ -13,7 +13,7 @@ python -m unittest discover -s tests -v
 
 Sono \textbf{65 test} e passano tutti.
 
-Ogni test parte da dati nuovi, creati nel metodo \code{setUp}, quindi i test non dipendono l'uno dall'altro. Stati, strategie di prezzo e modelli sono provati da soli (test di unità). Il controller è provato insieme al DAO tenuto in memoria, senza file (test di integrazione); al posto del servizio di pagamento vero si usa un oggetto di prova, \code{FixedPaymentService}, che risponde sempre allo stesso modo (\emph{stub}). I casi sono scelti a partire dai requisiti, provando sia i dati giusti sia quelli sbagliati (posti liberi, bloccati, venduti, inesistenti; carte valide e scadute) e i valori al limite (timeout appena sotto e appena sopra i 15 minuti, sconto del 0\% e del 100\%).
+Ogni test parte da dati nuovi, creati nel metodo \code{setUp}, quindi i test non dipendono l'uno dall'altro. Stati, strategie di prezzo e modelli sono provati da soli (test di unità). Il controller è provato insieme al DAO tenuto in memoria, senza file (test di integrazione); al posto del servizio di pagamento vero si usa un oggetto di prova, \code{FixedPaymentService}, che risponde sempre allo stesso modo (\emph{stub}). I casi sono scelti a partire dai requisiti, provando sia i dati giusti sia quelli sbagliati (posti liberi, bloccati, venduti, inesistenti; carte valide e scadute) e i valori al limite (timeout appena sotto e appena sopra i 15 minuti, sconto dello 0\% e del 100\%).
 
 {\small
 \begin{tabularx}{\textwidth}{@{}L{6.0cm}Y@{}}
