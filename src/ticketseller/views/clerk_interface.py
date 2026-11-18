@@ -8,6 +8,7 @@ from PyQt6.QtWidgets import QDateTimeEdit, QFormLayout, QLabel, QLineEdit, QList
 from ticketseller.controllers.ticket_seller import TicketSeller
 from ticketseller.models.event import Event, EventId
 from ticketseller.models.users import Clerk, UserId
+from ticketseller.patterns.strategy.pricing_strategy import quantize_money
 from ticketseller.utils import as_utc
 
 
@@ -137,6 +138,6 @@ class ClerkInterface(QWidget):
         """Parse and validate the price field."""
         try:
             # Normalize clerk-entered prices to currency precision.
-            return Decimal(self.price_input.text()).quantize(Decimal("0.01"))
+            return quantize_money(Decimal(self.price_input.text()))
         except InvalidOperation as exc:
             raise ValueError("Base price must be a valid number.") from exc
