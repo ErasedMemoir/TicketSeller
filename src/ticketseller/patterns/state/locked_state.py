@@ -30,6 +30,8 @@ class LockedState(TicketState):
         # Import lazily to avoid circular state imports.
         from ticketseller.patterns.state.sold_state import SoldState
 
+        if ticket.owner is not None and ticket.owner != customer:
+            raise ValueError("Ticket is locked by another customer.")
         ticket.set_state(SoldState())
         ticket.locked_at = None
         ticket.owner = customer

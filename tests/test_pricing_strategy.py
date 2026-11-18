@@ -8,6 +8,7 @@ from ticketseller.models.subscription import Subscription
 from ticketseller.models.ticket import SeatId, Ticket
 from ticketseller.models.voucher import VoucherId
 from ticketseller.patterns.strategy.group_pricing import GroupPricing
+from ticketseller.patterns.strategy.pricing_strategy import quantize_money
 from ticketseller.patterns.strategy.standard_pricing import StandardPricing
 from ticketseller.patterns.strategy.subscription_pricing import SubscriptionPricing
 
@@ -65,6 +66,11 @@ class PricingStrategyTest(unittest.TestCase):
         """Verify subscription pricing requires subscription data."""
         with self.assertRaises(ValueError):
             SubscriptionPricing().calculate_total(self.tickets)
+
+
+    def test_money_is_rounded_half_up(self) -> None:
+        """Verify amounts are rounded to the cent with commercial rounding."""
+        self.assertEqual(Decimal("5.03"), quantize_money(Decimal("5.025")))
 
 
 if __name__ == "__main__":

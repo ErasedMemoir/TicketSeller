@@ -199,5 +199,17 @@ class TicketDBTest(unittest.TestCase):
         self.assertEqual(["S001", "S003"], seats)
 
 
+    def test_delete_event_with_reserved_ticket_is_rejected(self) -> None:
+        """Verify events with a payment in progress cannot be deleted."""
+        database = TicketDB()
+        database.create_event(Event(EventId(1), "Concert", datetime.now(timezone.utc) + timedelta(days=1), 2, Decimal("10.00")))
+        ticket = database.find_tickets_by_seats(EventId(1), [SeatId("S001")])[0]
+        ticket.reserve()
+        database.save_ticket(ticket)
+
+        with self.assertRaises(ValueError):
+            database.delete_event(EventId(1))
+
+
 if __name__ == "__main__":
     unittest.main()

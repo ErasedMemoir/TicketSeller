@@ -3,6 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 
 from ticketseller.models.event import Event, EventId
+from ticketseller.models.subscription import Subscription
 from ticketseller.models.ticket import SeatId, Ticket
 from ticketseller.models.voucher import VoucherId
 
@@ -53,3 +54,15 @@ class TicketDAO(ABC):
     @abstractmethod
     def save_tickets(self, tickets: list[Ticket]) -> list[Ticket]:
         """Persist multiple tickets."""
+
+
+class SubscriptionDAO(ABC):
+    """DAO interface for subscription persistence."""
+
+    @abstractmethod
+    def find_subscription_by_id(self, subscription_id: VoucherId) -> Subscription | None:
+        """Return a subscription by identifier, if present."""
+
+    @abstractmethod
+    def create_subscription(self, subscription: Subscription) -> Subscription:
+        """Create a subscription in the datastore."""

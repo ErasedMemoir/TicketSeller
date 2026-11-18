@@ -8,6 +8,7 @@ from PyQt6.QtWidgets import QDateTimeEdit, QFormLayout, QLabel, QLineEdit, QList
 from ticketseller.controllers.ticket_seller import TicketSeller
 from ticketseller.models.event import Event, EventId
 from ticketseller.models.users import Clerk, UserId
+from ticketseller.utils import as_utc
 
 
 class ClerkInterface(QWidget):
@@ -25,6 +26,7 @@ class ClerkInterface(QWidget):
         self.name_input = QLineEdit()
         self.date_input = QDateTimeEdit()
         self.date_input.setCalendarPopup(True)
+        self.date_input.setDateTime(QDateTime.currentDateTime().addDays(1))
         self.capacity_input = QSpinBox()
         self.capacity_input.setMinimum(1)
         self.capacity_input.setMaximum(100000)
@@ -67,7 +69,7 @@ class ClerkInterface(QWidget):
         """Refresh the event list from the controller."""
         self.event_list.clear()
         for event in self.controller.search_future_events():
-            self.event_list.addItem(f"{int(event.id)} - {event.name} - {event.date:%Y-%m-%d %H:%M}")
+            self.event_list.addItem(f"{int(event.id)} - {event.name} - {as_utc(event.date).astimezone():%Y-%m-%d %H:%M}")
 
     def _build_event(self) -> Event:
         """Build an event object from form values."""
@@ -75,7 +77,7 @@ class ClerkInterface(QWidget):
         return Event(
             id=EventId(self.id_input.value()),
             name=self.name_input.text(),
-            date=self.date_input.dateTime().toPyDateTime(),
+            date=self.date_input.dateTime().toPyDateTime().astimezone(),
             capacity=self.capacity_input.value(),
             base_price=self._parse_price(),
             venue_name=self.venue_input.text() or None,
@@ -116,10 +118,11 @@ class ClerkInterface(QWidget):
             return
         self.id_input.setValue(int(event.id))
         self.name_input.setText(event.name)
+        local_date = as_utc(event.date).astimezone()
         self.date_input.setDateTime(
             QDateTime(
-                QDate(event.date.year, event.date.month, event.date.day),
-                QTime(event.date.hour, event.date.minute, event.date.second),
+                QDate(local_date.year, local_date.month, local_date.day),
+                QTime(local_date.hour, local_date.minute, local_date.second),
             )
         )
         self.capacity_input.setValue(event.capacity)

@@ -5,11 +5,12 @@ from decimal import Decimal
 from threading import RLock
 from typing import Protocol
 
-from ticketseller.dao.interfaces import EventDAO, TicketDAO
+from ticketseller.dao.interfaces import EventDAO, SubscriptionDAO, TicketDAO
 from ticketseller.external_services.credit_card_charges import PaymentData, PaymentResult
 from ticketseller.models.event import Event, EventId
 from ticketseller.models.subscription import Subscription
 from ticketseller.models.ticket import SeatId, Ticket
+from ticketseller.models.voucher import VoucherId
 from ticketseller.models.users import Clerk, Customer
 from ticketseller.patterns.strategy.pricing_strategy import PricingStrategy
 from ticketseller.utils import as_utc
@@ -33,12 +34,16 @@ class TicketSeller:
         ticket_dao: TicketDAO,
         payment_service: PaymentService,
         pricing_strategy: PricingStrategy,
+        subscription_strategy: PricingStrategy | None = None,
+        subscription_dao: SubscriptionDAO | None = None,
     ) -> None:
         """Initialize controller dependencies."""
         self.event_dao = event_dao
         self.ticket_dao = ticket_dao
         self.payment_service = payment_service
         self.pricing_strategy = pricing_strategy
+        self.subscription_strategy = subscription_strategy
+        self.subscription_dao = subscription_dao
         self._reservation_lock = RLock()
 
     def set_pricing_strategy(self, pricing_strategy: PricingStrategy) -> None:
@@ -51,12 +56,27 @@ class TicketSeller:
         self.release_expired_reservations(event_id)
         if len({str(seat_id) for seat_id in seat_ids}) != len(seat_ids):
             return False
-        tickets = self.ticket_dao.find_tickets_by_seats(event_id, seat_ids)
+        try:
+            tickets = self.ticket_dao.find_tickets_by_seats(event_id, seat_ids)
+        except ValueError:
+            return False
         return len(tickets) == len(seat_ids) and all(ticket.is_available() for ticket in tickets)
 
     def calculate_total(self, tickets: list[Ticket], subscription: Subscription | None = None) -> Decimal:
-        """Calculate the order total using the active pricing strategy."""
-        return self.pricing_strategy.calculate_total(tickets, subscription)
+        """Calculate the order total; a subscription selects the subscription strategy."""
+        strategy = self.pricing_strategy
+        if subscription is not None and self.subscription_strategy is not None:
+            strategy = self.subscription_strategy
+        return strategy.calculate_total(tickets, subscription)
+
+    def find_subscription(self, subscription_id: VoucherId) -> Subscription:
+        """Return the subscription with the given code or raise an error."""
+        subscription = None
+        if self.subscription_dao is not None:
+            subscription = self.subscription_dao.find_subscription_by_id(subscription_id)
+        if subscription is None:
+            raise ValueError("Subscription not found.")
+        return subscription
 
     def find_event_by_id(self, event_id: EventId) -> Event | None:
         """Return an event by identifier."""
@@ -93,8 +113,13 @@ class TicketSeller:
         """Purchase tickets by reserving seats, charging payment, and confirming sale."""
         # Roll back seat locks if the simulated payment fails.
         tickets = self.reserve_seats(event_id, seat_ids, customer)
-        total = self.calculate_total(tickets, subscription)
-        result = self.payment_service.process_payment(payment_data, total)
+        try:
+            total = self.calculate_total(tickets, subscription)
+            result = self.payment_service.process_payment(payment_data, total)
+        except ValueError:
+            # Invalid card data or pricing error: free the seats before reporting the error.
+            self.cancel_reservation(tickets)
+            raise
         if result.approved:
             self.confirm_sale(tickets, customer)
         else:

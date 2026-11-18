@@ -6,8 +6,9 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
-from ticketseller.dao.interfaces import EventDAO, TicketDAO
+from ticketseller.dao.interfaces import EventDAO, SubscriptionDAO, TicketDAO
 from ticketseller.models.event import Event, EventId
+from ticketseller.models.subscription import Subscription
 from ticketseller.models.ticket import SeatId, Ticket
 from ticketseller.models.users import Customer, UserId
 from ticketseller.models.voucher import VoucherId
@@ -18,7 +19,7 @@ from ticketseller.patterns.state.ticket_state import TicketState
 from ticketseller.utils import as_utc
 
 
-class TicketDB(EventDAO, TicketDAO):
+class TicketDB(EventDAO, TicketDAO, SubscriptionDAO):
     """Concrete DAO using dictionaries with optional JSON persistence."""
 
     def __init__(self, connection_string: str | None = None) -> None:
@@ -26,6 +27,7 @@ class TicketDB(EventDAO, TicketDAO):
         self.connection_string = connection_string
         self._events: dict[int, Event] = {}
         self._tickets: dict[int, Ticket] = {}
+        self._subscriptions: dict[int, Subscription] = {}
         self._path = Path(connection_string) if connection_string else None
         if self._path and self._path.exists():
             self._load()
@@ -65,10 +67,12 @@ class TicketDB(EventDAO, TicketDAO):
         return event
 
     def delete_event(self, event_id: EventId) -> None:
-        """Delete an event and all related tickets when no ticket is sold."""
+        """Delete an event and all related tickets when no ticket is sold or reserved."""
+        if int(event_id) not in self._events:
+            raise ValueError("Event does not exist.")
         tickets = self.find_tickets_by_event(event_id)
-        if any(ticket.state.name() == "sold" for ticket in tickets):
-            raise ValueError("Cannot delete an event with sold tickets.")
+        if any(not ticket.is_available() for ticket in tickets):
+            raise ValueError("Cannot delete an event with sold or reserved tickets.")
         self._events.pop(int(event_id), None)
         self._tickets = {
             key: ticket
@@ -109,6 +113,18 @@ class TicketDB(EventDAO, TicketDAO):
         self._persist()
         return tickets
 
+    def find_subscription_by_id(self, subscription_id: VoucherId) -> Subscription | None:
+        """Return a subscription from the datastore."""
+        return self._subscriptions.get(int(subscription_id))
+
+    def create_subscription(self, subscription: Subscription) -> Subscription:
+        """Store a new subscription."""
+        if int(subscription.id) in self._subscriptions:
+            raise ValueError("Subscription already exists.")
+        self._subscriptions[int(subscription.id)] = subscription
+        self._persist()
+        return subscription
+
     def _ensure_event_tickets(self, event: Event) -> None:
         """Synchronize event seats without overwriting sold tickets."""
         existing = {str(ticket.seat_id): ticket for ticket in self.find_tickets_by_event(event.id)}
@@ -121,6 +137,10 @@ class TicketDB(EventDAO, TicketDAO):
             or str(ticket.seat_id) in valid_seats
             or ticket.state.name() == "sold"
         }
+        # A new base price applies to the seats that are still available.
+        for ticket in existing.values():
+            if ticket.is_available():
+                ticket.base_price = event.base_price
         for seat_id in sorted(valid_seats - set(existing)):
             ticket_id = self._next_ticket_id()
             self._tickets[ticket_id] = Ticket(
@@ -143,6 +163,7 @@ class TicketDB(EventDAO, TicketDAO):
         data = {
             "events": [self._event_to_dict(event) for event in self._events.values()],
             "tickets": [self._ticket_to_dict(ticket) for ticket in self._tickets.values()],
+            "subscriptions": [self._subscription_to_dict(item) for item in self._subscriptions.values()],
         }
         self._path.write_text(json.dumps(data, indent=2), encoding="utf-8")
 
@@ -151,6 +172,7 @@ class TicketDB(EventDAO, TicketDAO):
         data = json.loads(self._path.read_text(encoding="utf-8")) if self._path else {}
         self._events = {item["id"]: self._event_from_dict(item) for item in data.get("events", [])}
         self._tickets = {item["id"]: self._ticket_from_dict(item) for item in data.get("tickets", [])}
+        self._subscriptions = {item["id"]: self._subscription_from_dict(item) for item in data.get("subscriptions", [])}
 
     def _event_to_dict(self, event: Event) -> dict[str, Any]:
         """Convert an event to JSON-compatible data."""
@@ -225,3 +247,25 @@ class TicketDB(EventDAO, TicketDAO):
         if item is None:
             return None
         return Customer(id=UserId(item["id"]), name=item["name"], email=item["email"])
+
+    def _subscription_to_dict(self, subscription: Subscription) -> dict[str, Any]:
+        """Convert a subscription to JSON-compatible data."""
+        return {
+            "id": int(subscription.id),
+            "event_id": int(subscription.event_id),
+            "base_price": str(subscription.base_price),
+            "covered_event_ids": [int(event_id) for event_id in subscription.covered_event_ids],
+            "package_name": subscription.package_name,
+            "discount_rate": str(subscription.discount_rate) if subscription.discount_rate is not None else None,
+        }
+
+    def _subscription_from_dict(self, item: dict[str, Any]) -> Subscription:
+        """Convert JSON-compatible data to a subscription."""
+        return Subscription(
+            id=VoucherId(item["id"]),
+            event_id=EventId(item["event_id"]),
+            base_price=Decimal(item["base_price"]),
+            covered_event_ids=[EventId(event_id) for event_id in item.get("covered_event_ids", [])],
+            package_name=item.get("package_name"),
+            discount_rate=Decimal(item["discount_rate"]) if item.get("discount_rate") is not None else None,
+        )

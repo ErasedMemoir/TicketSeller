@@ -3,7 +3,7 @@ from __future__ import annotations
 from decimal import Decimal
 import zlib
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import (
     QComboBox,
     QFormLayout,
@@ -21,8 +21,11 @@ from PyQt6.QtWidgets import (
 from ticketseller.controllers.ticket_seller import TicketSeller
 from ticketseller.external_services.credit_card_charges import PaymentData
 from ticketseller.models.event import EventId
+from ticketseller.models.subscription import Subscription
 from ticketseller.models.ticket import SeatId
 from ticketseller.models.users import Customer, UserId
+from ticketseller.models.voucher import VoucherId
+from ticketseller.utils import as_utc
 
 
 class KioskInterface(QWidget):
@@ -42,8 +45,14 @@ class KioskInterface(QWidget):
         self.cvv_input = QLineEdit("123")
         self.exp_month_input = QLineEdit("12")
         self.exp_year_input = QLineEdit("2099")
+        self.subscription_input = QLineEdit()
+        self.subscription_input.setPlaceholderText("optional")
         self._build_layout()
         self._load_events()
+        # Every minute release reservations older than the timeout (actor "Tempo", UC6).
+        self.release_timer = QTimer(self)
+        self.release_timer.timeout.connect(self._release_expired_reservations)
+        self.release_timer.start(60_000)
 
     def _build_layout(self) -> None:
         """Build widgets and signal connections."""
@@ -63,6 +72,7 @@ class KioskInterface(QWidget):
         form.addRow("CVV", self.cvv_input)
         form.addRow("Exp. Month", self.exp_month_input)
         form.addRow("Exp. Year", self.exp_year_input)
+        form.addRow("Subscription code", self.subscription_input)
         layout.addWidget(payment_group)
 
         buy_button = QPushButton("Buy Selected Seats")
@@ -74,6 +84,7 @@ class KioskInterface(QWidget):
 
         self.event_selector.currentIndexChanged.connect(self._load_seats)
         self.seat_list.itemSelectionChanged.connect(self._update_total)
+        self.subscription_input.editingFinished.connect(self._update_total)
         buy_button.clicked.connect(self._buy_selected_seats)
         refresh_button.clicked.connect(self._load_events)
 
@@ -81,7 +92,7 @@ class KioskInterface(QWidget):
         """Load future events into the event selector."""
         self.event_selector.clear()
         for event in self.controller.search_future_events():
-            self.event_selector.addItem(f"{event.name} ({event.date:%Y-%m-%d %H:%M})", int(event.id))
+            self.event_selector.addItem(f"{event.name} ({as_utc(event.date).astimezone():%Y-%m-%d %H:%M})", int(event.id))
         self._load_seats()
 
     def _load_seats(self, *_args: object) -> None:
@@ -107,7 +118,8 @@ class KioskInterface(QWidget):
         try:
             seats = self._selected_seats()
             tickets = self.controller.get_tickets_by_seats(event_id, seats) if seats else []
-            total = self.controller.calculate_total(tickets) if tickets else Decimal("0.00")
+            subscription = self._current_subscription()
+            total = self.controller.calculate_total(tickets, subscription) if tickets else Decimal("0.00")
             self.total_label.setText(f"Total: {total}")
         except ValueError as exc:
             self._show_error(str(exc))
@@ -138,7 +150,8 @@ class KioskInterface(QWidget):
                 expiration_year,
                 self.cvv_input.text(),
             )
-            result = self.controller.purchase_access_title(event_id, seats, customer, payment)
+            subscription = self._current_subscription()
+            result = self.controller.purchase_access_title(event_id, seats, customer, payment, subscription)
             QMessageBox.information(
                 self,
                 "Payment",
@@ -147,6 +160,21 @@ class KioskInterface(QWidget):
             self._load_seats()
         except (ValueError, PermissionError) as exc:
             self._show_error(str(exc))
+            self._load_seats()
+
+    def _release_expired_reservations(self) -> None:
+        """Free expired reservations and refresh the seat map if something changed."""
+        if self.controller.release_expired_reservations():
+            self._load_seats()
+
+    def _current_subscription(self) -> Subscription | None:
+        """Return the subscription whose code is typed in the form, if any."""
+        code = self.subscription_input.text().strip()
+        if not code:
+            return None
+        if not code.isdigit():
+            raise ValueError("Subscription code must be a number.")
+        return self.controller.find_subscription(VoucherId(int(code)))
 
     def _current_event_id(self) -> EventId | None:
         """Return the selected event identifier."""

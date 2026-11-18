@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -19,4 +19,4 @@ class PricingStrategy(ABC):
 
 def quantize_money(amount: Decimal) -> Decimal:
     """Round a monetary amount to two decimal places."""
-    return amount.quantize(Decimal("0.01"))
+    return amount.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
